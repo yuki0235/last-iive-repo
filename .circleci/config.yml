@@ -13,6 +13,7 @@ jobs:
           name: create_or_update_stack
           command: |
             aws cloudformation create-stack --stack-name live-stack --template-body file://cloudformation/infrastructure.yml
+            aws cloudformation wait stack-create-complete --stack-name live-stack
 
 workflows:
   live_workflow:
