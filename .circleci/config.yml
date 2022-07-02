@@ -12,8 +12,17 @@ jobs:
       - run:
           name: create_or_update_stack
           command: |
-            aws cloudformation create-stack --stack-name live-stack --template-body file://cloudformation/infrastructure.yml
-            aws cloudformation wait stack-create-complete --stack-name live-stack
+            aws cloudformation list-stacks --stack-status-filter CREATE_COMPLETE | grep StackName | grep live-stack
+            if [ $? -eq 0 ]; then
+              aws cloudformation update-stack --stack-name live-stack --template-body file://cloudformation/infrastructure.yml
+              if [ $? -eq 255 -o $? -eq 254 ]; then
+                exit 0
+              fi
+              aws cloudformation wait stack-update-complete --stack-name live-stack
+            elif [ $? -eq 1 ]; then
+              aws cloudformation create-stack --stack-name live-stack --template-body file://cloudformation/infrastructure.yml
+              aws cloudformation wait stack-create-complete --stack-name live-stack
+            fi
 
 workflows:
   live_workflow:
