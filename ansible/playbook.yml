@@ -1,0 +1,8 @@
+---
+- hosts: web
+  become: yes
+  tasks:
+    - name: installed git
+      yum:
+        name: git
+        state: installed

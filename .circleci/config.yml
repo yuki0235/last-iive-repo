@@ -2,6 +2,12 @@ version: 2.1
 
 orbs:
   aws-cli: circleci/aws-cli@3.1.1
+  ansible-playbook: orbss/ansible-playbook@0.0.5
+
+executors:
+  python:
+    docker:
+      - image: circleci/python
 
 jobs:
   execute_cloudformation:
@@ -24,8 +30,48 @@ jobs:
               aws cloudformation create-stack --stack-name live-stack --template-body file://cloudformation/infrastructure.yml
               aws cloudformation wait stack-create-complete --stack-name live-stack
             fi
+  execute_ansible_playbook:
+    executor: python
+    parameters:
+      version:
+        description: |
+          Ansible version
+        type: string
+        default: ""
+      inventory:
+        description: |
+          Ansible inventory file. The default value must be empty,
+          so do not store any value to this environment variable.
+          The data must be registered in base64 format
+        type: env_var_name
+        default: NONEXISTENT_ANSIBLE_INVENTORY
+      playbook:
+        description: |
+          The path of Ansible playbook
+        type: string
+      private-key:
+        description: |
+          SSH private key file. The default value must be empty,
+          so do not store any value to this environment variable.
+          The data must be registered in base64 format
+        type: env_var_name
+        default: NONEXISTENT_ANSIBLE_SSH_KEY
+    steps:
+      - checkout
+      - ansible-playbook/install:
+          version: <<parameters.version>>
+      - ansible-playbook/playbook:
+          inventory: <<parameters.inventory>>
+          playbook: <<parameters.playbook>>
+          private-key: <<parameters.private-key>>
 
 workflows:
   live_workflow:
     jobs:
       - execute_cloudformation
+      - execute_ansible_playbook:
+          inventory: ANSIBLE_INVENTORY
+          playbook: ansible/playbook.yml
+          private-key: ANSIBLE_SSH_KEY
+          requires:
+            - execute_cloudformation
